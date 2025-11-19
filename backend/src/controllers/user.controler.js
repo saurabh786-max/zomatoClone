@@ -3,6 +3,20 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 
+const generateAccessTokenAndRefeshToken = async(userId)=>{
+    try{
+        const user = await User.findById(userId);
+        const accessToken = await user.generateAccessToken();
+        const refeshToken = await user.generateRefreshToken();
+        user.refreshToken = refeshToken;
+        await user.save({validateBeforeSave:false})
+        return {accessToken,refeshToken}
+    }
+    catch(error){
+        throw new apiError(500,"something went wrong in tokenGeneration function!!")
+    }
+}
+
 const registerUser = asyncHandler(async (req,res)=>{
 
     const{userName,email,password,fullName} = req.body;
@@ -31,7 +45,47 @@ const registerUser = asyncHandler(async (req,res)=>{
 
 
 const loginUser = asyncHandler(async (req,res)=>{
+// 1.take data from req.body 
 
+    const{userName,password} = req.body
+
+    if(!userName){
+        throw new apiError(402,"username not given")
+    }
+    // 2. search for user in the db
+
+    const user = await User.findOne({userName})
+
+    if(!user){
+        throw new apiError(400,"user does'nt exist")
+    }
+
+    //3.if user is found check his password
+
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    if(!isPasswordValid){
+        throw new apiError(401,"invalid user credentials ")
+    }
+
+// 4. if user passwrod is correct, we have to generate access token and refreshtoken for the user
+const{accessToken,refeshToken} = await generateAccessTokenAndRefeshToken(user._id)
+
+const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+
+const options = {
+    httpOnly: true,
+}
+
+// 5. returing response to the user 
+return res.status(200)
+.cookie("accessToken",accessToken,options)
+.cookie("refreshToken",refeshToken,options)
+.json(
+    new apiResponse(200,{
+        user:loggedInUser,accessToken,refeshToken
+    },
+"user loggedIn Successfully !!")
+)
 })
 
-export{registerUser}
+export{registerUser,loginUser}
