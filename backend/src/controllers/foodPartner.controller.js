@@ -2,6 +2,7 @@ import { Partner } from "../models/foodPartner.model.js";
 import { apiError } from "../utils/apiError.js";
 import jwt from "jsonwebtoken";
 import { apiResponse } from "../utils/apiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 const generateAccessTokenAndRefeshToken =   async (userId)=>{
     try{
         const partner = await Partner.findById(userId);
@@ -45,7 +46,7 @@ const registerfoodPartner = asyncHandler(async(req,res)=>{
 const loginFoodPartner = asyncHandler(async(req,res)=>{
     const {name,email,password} = req.body;
     
-    const partner = Partner.findOne({email})
+    const partner = await Partner.findOne({email})
     if(!partner){
         throw new apiError(401,"no user found with this email!!! ");
     }
@@ -70,4 +71,26 @@ const loginFoodPartner = asyncHandler(async(req,res)=>{
 
 })
 
-export{registerfoodPartner,loginFoodPartner}
+const logoutFoodPartner = asyncHandler(async (req,res)=>{
+
+    await Partner.findByIdAndUpdate(req.partner._id,{
+        $set:{
+            refreshToken:undefined
+        }
+    },
+    {
+        new:true
+    }
+) 
+    const options = {
+        httpOnly:true
+    }
+    res.status(200)
+    .clearCookie("accessToken",options)
+    .clearCookie("refreshToken",options)
+    .json(
+        new apiResponse(201,"Partner logedOut successfully !!")
+    )
+})
+
+export{registerfoodPartner,loginFoodPartner,logoutFoodPartner}
