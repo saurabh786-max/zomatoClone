@@ -1,17 +1,27 @@
+import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadFile } from "../utils/imagekit.js";
+ 
 
 const foodItems = asyncHandler(async (req,res)=>{
-    const{vedio,name,description,foodPartner} = req.body;
-    const vediolocalPath = req.files?.vedio[0]?.path
-    const file = uploadOnCloudinary(vediolocalPath);
-    res.status(200)
-    .json(new apiResponse(
-        200,"food item added" 
-    ))
-console.log(req.body);
-console.log(req.files);
+    const{name,description,foodPartner} = req.body;
+    console.log("req.headers:", req.headers);
+    console.log("req.file:", req.file);
+    console.log("req.files:", req.files);
+    console.log("req.body:", req.body);
+    if (!req.file || !req.file.buffer) {
+      // Throw your custom API error if the file is missing or empty
+      throw new apiError(400, "File is missing or failed to process by middleware."); 
+  }
+    const fileNameforUpload = req.file.originalname;
+    // controllers/food.controller.js (key bits)
+  const fileUploadResult = await uploadFile(req.file.buffer,fileNameforUpload)
+
+console.log(fileUploadResult);
+// const videoUrl = uploadResult?.secure_url || uploadResult?.url;
+return res.status(201).json(new apiResponse(201, "Food item added", { name, description, foodPartner}));
+
 })
 
 export{foodItems}
