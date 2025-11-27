@@ -2,6 +2,7 @@ import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadFile } from "../utils/imagekit.js";
+import {v4 as uuid} from "uuid"
  
 
 const foodItems = asyncHandler(async (req,res)=>{
@@ -14,13 +15,19 @@ const foodItems = asyncHandler(async (req,res)=>{
       // Throw your custom API error if the file is missing or empty
       throw new apiError(400, "File is missing or failed to process by middleware."); 
   }
-    const fileNameforUpload = req.file.originalname;
+    // const fileNameforUpload = req.file.originalname;
     // controllers/food.controller.js (key bits)
-  const fileUploadResult = await uploadFile(req.file.buffer,fileNameforUpload)
+  const fileUploadResult = await uploadFile(req.file.buffer,uuid())
 
 console.log(fileUploadResult);
 // const videoUrl = uploadResult?.secure_url || uploadResult?.url;
-return res.status(201).json(new apiResponse(201, "Food item added", { name, description, foodPartner}));
+// temporarily replace the last line in your controller with:
+return res.status(201).json({
+  success: true,
+  uploaded: fileUploadResult,
+  item: { name, description, foodPartner }
+});
+
 
 })
 
